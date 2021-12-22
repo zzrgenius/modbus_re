@@ -11,14 +11,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <linux/kernel.h>
+#include <pthread.h>
 #include <sys/time.h>
 #include <string.h>
 #include <signal.h>
 #include <time.h>
 #include <math.h>
+#include <semaphore.h>
+#include "zlog.h"
+#include <unistd.h>
+#include "slave_dev_conf.h"
+
 #define SLAVE_DEVICE_ID 1
 static modbus_mapping_t *mb_mapping;
-
+//static sem_t map_sem;
+static pthread_mutex_t mb_map_mutex;
 #if 0
 //简单打印信息，定时器触发函数
 void print_info(int signo)
@@ -70,11 +78,52 @@ float generate_pv_power(float x)
 void timer_thread(union sigval v)
 {
 	static uint16_t i = 0;
+	float current_pv_power;
+	float *fp_data = NULL;
+ 	uint8_t *p_ucdata = NULL;
 	if(mb_mapping == NULL)
 		return ;
-	mb_mapping->tab_registers[2] = generate_pv_power(i);
+
+	pthread_mutex_lock(&mb_map_mutex);
+	current_pv_power = generate_pv_power(i++);
+	fp_data = &current_pv_power;
+ 	p_ucdata =	 (uint8_t *)fp_data;
+
+//	mb_mapping->tab_registers[3] = p_udata[0];
+//	mb_mapping->tab_registers[2] = p_udata[1];
+	modbus_set_float_abcd(*fp_data, &mb_mapping->tab_registers[2]);
+//	dzlog_info("\r\n %f data[0]:0x-%02x %02x %02x %02x 0x%04x 0x%04x\r\n",*fp_data,p_ucdata[0],p_ucdata[1],p_ucdata[2],p_ucdata[3],mb_mapping->tab_registers[2],mb_mapping->tab_registers[3]);
+	pthread_mutex_unlock(&mb_map_mutex);
+
+//	  sem_post(&map_sem);
 
 //    printf("timer_thread function! %d\n", v.sival_int);
+}
+extern int letter_config(void);
+
+void init_for_modbus(void)
+{
+	int rc = 0;
+//	rc = dzlog_init("test_default.conf", "my_cat");
+//	if (rc) {
+//		dzlog_warn("dzlog init failed\n");
+//	}
+	rc = get_device_map();
+//	if (rc) {
+//		dzlog_warn("get_device_map  failed\n");
+//
+//	}
+ 	pthread_mutex_init(&mb_map_mutex, NULL);
+ 	letter_config();
+}
+static void mytest(void)
+{
+	unsigned int x=0x12345678; /* 305419896 */
+
+	unsigned char *p=(unsigned char *)&x;
+	printf(" %02x %02x %02x %02x\r\n",p[0],p[1],p[2],p[3]);
+	fflush(stdout);
+	return ;
 }
 int main(int argc, char *argv[])
 {
@@ -90,11 +139,16 @@ int main(int argc, char *argv[])
 			printf("%s \r\n",argv[1]);
 		}
 	}
+	sleep(1);
+	mytest();
+
 //    init_sigaction();
 //    init_time();
+//	sem_init(&map_sem, 0, 1);
+	init_for_modbus();
 	ctx = modbus_new_rtu("/dev/ttyUSB0",9600,'N',8,1);
 	modbus_set_slave(ctx, SLAVE_DEVICE_ID);
-	modbus_set_debug(ctx, TRUE);
+//	modbus_set_debug(ctx, TRUE);  //打开modbus调试
 	if (modbus_connect(ctx) == -1)
 	{
 		fprintf(stderr, "Connection failed:%s\n", modbus_strerror(errno));
@@ -121,9 +175,9 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	/* 第一次间隔it.it_value这么长,以后每次都是it.it_interval这么长,就是说it.it_value变0的时候会>装载it.it_interval的值 */
-	it.it_interval.tv_sec = 2;  // 回调函数执行频率为1s运行1次
+	it.it_interval.tv_sec = 1;  // 回调函数执行频率为1s运行1次
 	it.it_interval.tv_nsec = 0;
-	it.it_value.tv_sec = 3;     // 倒计时3秒开始调用回调函数
+	it.it_value.tv_sec = 5;     // 倒计时3秒开始调用回调函数
 	it.it_value.tv_nsec = 0;
 	if (timer_settime(timerid, 0, &it, NULL) == -1)
 	{
@@ -131,6 +185,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 //	while(1);
+//	dzlog_info("goto loop\r");
 	for (;;)
 	{
 		uint8_t query[MODBUS_TCP_MAX_ADU_LENGTH];
@@ -139,12 +194,19 @@ int main(int argc, char *argv[])
 		rc = modbus_receive(ctx, query);
 		if (rc > 0)
 		{
+//			  sem_wait(&map_sem);
+			pthread_mutex_lock(&mb_map_mutex);
+
 			modbus_reply(ctx, query, rc, mb_mapping);
+			pthread_mutex_unlock(&mb_map_mutex);
+
 		}
 		else
 		{
 			printf("Connection Closed\n");
 		}
 	}
+	zlog_fini();
+	modbus_mapping_free(mb_mapping);
 	return 0;
 }

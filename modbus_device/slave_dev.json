@@ -1,0 +1,15 @@
+{
+	"slave_address":1,
+	"HoldingReg":	[{
+			"id":1,
+			"name":	"power",
+			"regaddr":1,
+			"flaot_data":1.1
+		},
+		{
+			"id": 2,
+			"name":"ab_v",
+			"regaddr":3,
+			"float_data":2.2
+		}]
+}

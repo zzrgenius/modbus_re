@@ -1,3 +1,9 @@
 [submodule "libmodbus"]
 	path = libmodbus
 	url = https://github.com/stephane/libmodbus.git
+[submodule "cJSON"]
+	path = cJSON
+	url = https://github.com/DaveGamble/cJSON.git
+[submodule "struct2json"]
+	path = struct2json
+	url = https://github.com/armink/struct2json.git
