@@ -101,7 +101,7 @@ void timer_thread(union sigval v)
 }
 extern int letter_config(void);
 
-void init_for_modbus(void)
+int  init_for_modbus(void)
 {
 	int rc = 0;
 //	rc = dzlog_init("test_default.conf", "my_cat");
@@ -115,7 +115,10 @@ void init_for_modbus(void)
 //	}
  	pthread_mutex_init(&mb_map_mutex, NULL);
  	letter_config();
+ 	return rc;
 }
+extern int json_main(void);
+
 static void mytest(void)
 {
 	unsigned int x=0x12345678; /* 305419896 */
@@ -123,6 +126,7 @@ static void mytest(void)
 	unsigned char *p=(unsigned char *)&x;
 	printf(" %02x %02x %02x %02x\r\n",p[0],p[1],p[2],p[3]);
 	fflush(stdout);
+	json_main();
 	return ;
 }
 int main(int argc, char *argv[])

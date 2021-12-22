@@ -5,10 +5,10 @@
  *      Author: zirun
  */
 
- #include <string.h>
+#include <string.h>
 #include <stdio.h>
 #include "shell.h"
-
+#include "slave_dev_conf.h"
 #if 0
 /**
  * @brief shell设置变量
@@ -48,10 +48,22 @@ setVar, shellSetVar, set var);
 #endif
 int setreg(int argc, char *agrv[])
 {
+	int reg_addr = 0;
+	float value = 0.0;
     printf("%d parameter(s)\r\n", argc);
     for (char i = 1; i < argc; i++)
     {
         printf("%s\r\n",  agrv[i]);
+    }
+    if(argc > 2)
+    {
+    	reg_addr = atoi(agrv[1]);
+    	value = atof(agrv[2]);
+    }
+    if(reg_addr < MAX_HOLD_REG_SIZE)
+    {
+        printf("reg_addr:%d value:%f\r\n",  reg_addr,value);
+
     }
     return 0;
 }

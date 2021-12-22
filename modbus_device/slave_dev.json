@@ -1,15 +1,16 @@
 {
 	"slave_address":1,
+	"dev_name":"all-in-one",
 	"HoldingReg":	[{
 			"id":1,
 			"name":	"power",
 			"regaddr":1,
-			"flaot_data":1.1
+			"value":1.1
 		},
 		{
 			"id": 2,
 			"name":"ab_v",
 			"regaddr":3,
-			"float_data":2.2
+			"value":2.2
 		}]
 }
