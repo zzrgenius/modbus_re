@@ -24,9 +24,9 @@
 #include "slave_dev_conf.h"
 
 #define SLAVE_DEVICE_ID 1
-static modbus_mapping_t *mb_mapping;
+  modbus_mapping_t *mb_mapping;
 //static sem_t map_sem;
-static pthread_mutex_t mb_map_mutex;
+ pthread_mutex_t mb_map_mutex;
 #if 0
 //简单打印信息，定时器触发函数
 void print_info(int signo)
@@ -91,7 +91,7 @@ void timer_thread(union sigval v)
 
 //	mb_mapping->tab_registers[3] = p_udata[0];
 //	mb_mapping->tab_registers[2] = p_udata[1];
-	modbus_set_float_abcd(*fp_data, &mb_mapping->tab_registers[2]);
+//	modbus_set_float_abcd(*fp_data, &mb_mapping->tab_registers[2]);
 //	dzlog_info("\r\n %f data[0]:0x-%02x %02x %02x %02x 0x%04x 0x%04x\r\n",*fp_data,p_ucdata[0],p_ucdata[1],p_ucdata[2],p_ucdata[3],mb_mapping->tab_registers[2],mb_mapping->tab_registers[3]);
 	pthread_mutex_unlock(&mb_map_mutex);
 
@@ -108,13 +108,13 @@ int  init_for_modbus(void)
 //	if (rc) {
 //		dzlog_warn("dzlog init failed\n");
 //	}
+ 	pthread_mutex_init(&mb_map_mutex, NULL);
 	rc = get_device_map();
 //	if (rc) {
 //		dzlog_warn("get_device_map  failed\n");
 //
 //	}
- 	pthread_mutex_init(&mb_map_mutex, NULL);
- 	letter_config();
+// 	letter_config();
  	return rc;
 }
 extern int json_main(void);
@@ -149,10 +149,9 @@ int main(int argc, char *argv[])
 //    init_sigaction();
 //    init_time();
 //	sem_init(&map_sem, 0, 1);
-	init_for_modbus();
 	ctx = modbus_new_rtu("/dev/ttyUSB0",9600,'N',8,1);
 	modbus_set_slave(ctx, SLAVE_DEVICE_ID);
-//	modbus_set_debug(ctx, TRUE);  //打开modbus调试
+	modbus_set_debug(ctx, TRUE);  //打开modbus调试
 	if (modbus_connect(ctx) == -1)
 	{
 		fprintf(stderr, "Connection failed:%s\n", modbus_strerror(errno));
@@ -160,15 +159,17 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 //	(int nb_bits, int nb_input_bits,int nb_registers, int nb_input_registers);
-	mb_mapping = modbus_mapping_new(8, 8, 100, 100);
+	mb_mapping = modbus_mapping_new(9, 9, 100, 100);
+	init_for_modbus();
+
 	if (mb_mapping == NULL)
 	{
 		fprintf(stderr, "Error mapping: %s\n", modbus_strerror(errno));
 		modbus_free(ctx);
 		return -1;
 	}
-	mb_mapping->tab_registers[0] = 1;
-	mb_mapping->tab_registers[1] = 2;
+//	mb_mapping->tab_registers[0] = 1;
+//	mb_mapping->tab_registers[1] = 2;
 	memset(&evp, 0, sizeof(struct sigevent));       //清零初始化
 	evp.sigev_value.sival_int = 111;                //也是标识定时器的，回调函数可以获得
 	evp.sigev_notify = SIGEV_THREAD;                //线程通知的方式，派驻新线程
@@ -212,5 +213,7 @@ int main(int argc, char *argv[])
 	}
 	zlog_fini();
 	modbus_mapping_free(mb_mapping);
+    modbus_close(ctx);
+    modbus_free(ctx);
 	return 0;
 }

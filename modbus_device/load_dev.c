@@ -18,6 +18,13 @@
 #include <stdint.h>
 #include <errno.h>
 #include "slave_dev_conf.h"
+#include "modbus/modbus.h"
+#include <semaphore.h>
+#include <pthread.h>
+
+extern  modbus_mapping_t *mb_mapping;
+extern pthread_mutex_t mb_map_mutex;
+
 int get_device_map(void)
 {
 	uint8_t *p_json_buf = NULL;
@@ -107,6 +114,13 @@ int get_device_map(void)
 	        	pHoldRegs[i].fvalue = slave_value->valuedouble;
 	        }
 	        printf("id:%d name:%s reg:%d value:%f\r\n",pHoldRegs[i].id,pHoldRegs[i].name ,pHoldRegs[i].reg_addr,pHoldRegs[i].fvalue);
+			pthread_mutex_lock(&mb_map_mutex);
+
+//	    	modbus_set_float_abcd(pHoldRegs[i].fvalue, &mb_mapping->tab_registers[2*i+1]);
+			modbus_set_float_dcba(pHoldRegs[i].fvalue, &mb_mapping->tab_registers[2*i+1]);
+
+			pthread_mutex_unlock(&mb_map_mutex);
+
 //	    	cJSON *slave_id = NULL;
 //	    	cJSON *slave_name = NULL;
 //	    	cJSON *slave_regaddr = NULL;
