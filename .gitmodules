@@ -7,3 +7,6 @@
 [submodule "struct2json"]
 	path = struct2json
 	url = https://github.com/armink/struct2json.git
+[submodule "zlog"]
+	path = zlog
+	url = https://github.com/HardySimpson/zlog.git
